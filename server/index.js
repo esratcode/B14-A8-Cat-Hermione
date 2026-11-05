@@ -3,7 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { ObjectId } = require("mongodb");
-const { toNodeHandler, fromNodeHeaders } = require("better-auth/node");
+
+const betterAuthNode = import("better-auth/node");
 
 const auth = require("./lib/auth");
 const { client, db } = require("./lib/db");
@@ -20,7 +21,14 @@ app.use(
 );
 
 // Better Auth Route
-app.all("/api/auth/*splat", toNodeHandler(auth));
+app.all("/api/auth/*splat", async (req, res, next) => {
+  try {
+    const { toNodeHandler } = await betterAuthNode;
+    return toNodeHandler(auth)(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use(express.json());
 
@@ -29,6 +37,8 @@ let catsCollection;
 // Authentication Middleware
 async function requireAuth(req, res, next) {
   try {
+    const { fromNodeHeaders } = await betterAuthNode;
+
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
