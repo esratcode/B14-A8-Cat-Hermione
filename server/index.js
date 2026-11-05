@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const express = require("express");
@@ -6,7 +7,7 @@ const { ObjectId } = require("mongodb");
 
 const betterAuthNode = import("better-auth/node");
 
-const auth = require("./lib/auth");
+const authPromise = require("./lib/auth");
 const { client, db } = require("./lib/db");
 
 const app = express();
@@ -15,29 +16,40 @@ const PORT = process.env.PORT || 5000;
 // CORS Configuration
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://cat-hermione-client111-q0k3emuse-dev-stack-builder2.vercel.app",
+    ],
     credentials: true,
   }),
 );
-
-// Better Auth Route
-app.all("/api/auth/*splat", async (req, res, next) => {
-  try {
-    const { toNodeHandler } = await betterAuthNode;
-    return toNodeHandler(auth)(req, res, next);
-  } catch (error) {
-    next(error);
-  }
-});
 
 app.use(express.json());
 
 let catsCollection;
 
+// Better Auth Route
+app.all("/api/auth/*splat", async (req, res, next) => {
+  try {
+    const [{ toNodeHandler }, auth] = await Promise.all([
+      betterAuthNode,
+      authPromise,
+    ]);
+
+    return toNodeHandler(auth)(req, res, next);
+  } catch (error) {
+    console.error("Better Auth route error:", error);
+    next(error);
+  }
+});
+
 // Authentication Middleware
 async function requireAuth(req, res, next) {
   try {
-    const { fromNodeHeaders } = await betterAuthNode;
+    const [{ fromNodeHeaders }, auth] = await Promise.all([
+      betterAuthNode,
+      authPromise,
+    ]);
 
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),

@@ -1,19 +1,24 @@
-const { betterAuth } = require("better-auth");
-const { mongodbAdapter } = require("better-auth/adapters/mongodb");
 const { db } = require("./db");
 
-const auth = betterAuth({
-  database: mongodbAdapter(db),
+const authPromise = (async () => {
+  const { betterAuth } = await import("better-auth");
+  const { mongodbAdapter } = await import("better-auth/adapters/mongodb");
 
-  // Allow requests from Next.js frontend
-  trustedOrigins: ["http://localhost:3000"],
+  return betterAuth({
+    database: mongodbAdapter(db),
 
-  emailAndPassword: {
-    enabled: true,
-  },
+    trustedOrigins: [
+      "http://localhost:3000",
+      "https://cat-hermione-client111-q0k3emuse-dev-stack-builder2.vercel.app",
+    ],
 
-  baseURL: process.env.BETTER_AUTH_URL,
-  secret: process.env.BETTER_AUTH_SECRET,
-});
+    emailAndPassword: {
+      enabled: true,
+    },
 
-module.exports = auth;
+    baseURL: process.env.BETTER_AUTH_URL,
+    secret: process.env.BETTER_AUTH_SECRET,
+  });
+})();
+
+module.exports = authPromise;
