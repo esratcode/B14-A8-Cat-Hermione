@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 
 const express = require("express");
@@ -6,11 +5,11 @@ const cors = require("cors");
 const { ObjectId } = require("mongodb");
 
 const betterAuthNode = import("better-auth/node");
-
 const authPromise = require("./lib/auth");
 const { client, db } = require("./lib/db");
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
 // CORS Configuration
@@ -27,6 +26,80 @@ app.use(
 app.use(express.json());
 
 let catsCollection;
+let dbInitialization;
+
+// Initialize MongoDB
+async function initializeDB() {
+  if (!dbInitialization) {
+    dbInitialization = (async () => {
+      await client.connect();
+
+      catsCollection = db.collection("cats");
+
+      console.log("MongoDB connected successfully!");
+
+      // Add sample cats only if collection is empty
+      const count = await catsCollection.countDocuments();
+
+      if (count === 0) {
+        await catsCollection.insertMany([
+          {
+            name: "Milo",
+            image: "/cats/cat1.jpg",
+            description: "A cute and playful orange cat.",
+            age: "2 years",
+            status: "Available",
+            color: "Orange",
+            gender: "Male",
+            createdAt: new Date(),
+          },
+          {
+            name: "Luna",
+            image: "/cats/cat2.jpg",
+            description: "A lovely and gentle white cat.",
+            age: "1 year",
+            status: "Available",
+            color: "White",
+            gender: "Female",
+            createdAt: new Date(),
+          },
+          {
+            name: "Oliver",
+            image: "/cats/cat3.jpg",
+            description: "A friendly and adorable grey cat.",
+            age: "3 years",
+            status: "Adopted",
+            color: "Grey",
+            gender: "Male",
+            createdAt: new Date(),
+          },
+        ]);
+
+        console.log("Sample cats added successfully!");
+      }
+    })().catch((error) => {
+      dbInitialization = null;
+      throw error;
+    });
+  }
+
+  return dbInitialization;
+}
+
+// Ensure MongoDB is connected before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await initializeDB();
+    next();
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
 
 // Better Auth Route
 app.all("/api/auth/*splat", async (req, res, next) => {
@@ -71,63 +144,6 @@ async function requireAuth(req, res, next) {
       success: false,
       message: "Authentication failed",
     });
-  }
-}
-
-// Connect MongoDB
-async function connectDB() {
-  try {
-    await client.connect();
-
-    catsCollection = db.collection("cats");
-
-    console.log("MongoDB connected successfully!");
-
-    // Add sample cats only if collection is empty
-    const count = await catsCollection.countDocuments();
-
-    if (count === 0) {
-      await catsCollection.insertMany([
-        {
-          name: "Milo",
-          image: "/cats/cat1.jpg",
-          description: "A cute and playful orange cat.",
-          age: "2 years",
-          status: "Available",
-          color: "Orange",
-          gender: "Male",
-          createdAt: new Date(),
-        },
-        {
-          name: "Luna",
-          image: "/cats/cat2.jpg",
-          description: "A lovely and gentle white cat.",
-          age: "1 year",
-          status: "Available",
-          color: "White",
-          gender: "Female",
-          createdAt: new Date(),
-        },
-        {
-          name: "Oliver",
-          image: "/cats/cat3.jpg",
-          description: "A friendly and adorable grey cat.",
-          age: "3 years",
-          status: "Adopted",
-          color: "Grey",
-          gender: "Male",
-          createdAt: new Date(),
-        },
-      ]);
-
-      console.log("Sample cats added successfully!");
-    }
-
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("MongoDB connection failed:", error);
   }
 }
 
@@ -385,5 +401,19 @@ app.delete("/api/cats/:id", requireAuth, async (req, res) => {
   }
 });
 
-// Start Server
-connectDB();
+// Export Express app for Vercel
+module.exports = app;
+
+// Start server locally only
+if (require.main === module) {
+  initializeDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error("Server startup failed:", error);
+      process.exit(1);
+    });
+}
