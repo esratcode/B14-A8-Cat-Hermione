@@ -1,7 +1,7 @@
 import AdoptButton from "../../components/AdoptButton";
 import Link from "next/link";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://b14-a8-cat-hermione.vercel.app";
 
 export default async function CatDetails({ params }) {
   const { id } = await params;

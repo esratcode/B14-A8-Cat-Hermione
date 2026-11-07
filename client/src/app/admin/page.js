@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://b14-a8-cat-hermione.vercel.app";
 
 const emptyCat = {
   name: "",

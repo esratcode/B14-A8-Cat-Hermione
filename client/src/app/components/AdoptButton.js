@@ -16,7 +16,7 @@ export default function AdoptButton({ catId, catName, initialStatus }) {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/cats/${catId}/adopt`,
+        `https://b14-a8-cat-hermione.vercel.app/api/cats/${catId}/adopt`,
         {
           method: "PATCH",
           credentials: "include",
